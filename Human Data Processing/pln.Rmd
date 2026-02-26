@@ -1,0 +1,221 @@
+]---
+title: "HPAP PLN scRNA Pseudobulk DEG Pipeline"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+# ============================================================
+# HPAP Spleen scRNA-seq Pseudobulk DEG (DESeq2) + GSEA
+# - Seurat v5 (layers) compatible
+# - Pseudobulk per cell type: aggregate counts by sample (donor__group)
+# - DESeq2: T1D vs ND
+# - QC: cell composition + sample retention curves
+# - Downstream: volcano, heatmap, Hallmark/C2 fgsea, GO gseGO
+# ============================================================
+
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(Matrix)
+  library(dplyr)
+  library(stringr)
+  library(ggplot2)
+  library(patchwork)
+
+  library(DESeq2)
+  library(pheatmap)
+  library(ggrepel)
+
+  library(msigdbr)
+  library(fgsea)
+
+  library(clusterProfiler)
+  library(enrichplot)
+  library(org.Hs.eg.db)
+  library(tibble)
+})
+
+set.seed(1234)
+
+# -------------------------
+# Config
+# -------------------------
+in_rds      <- "/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/MAI_T1D/pln_result.rds"
+assay_name  <- "RNA"
+count_layer <- "counts"   # Seurat v5 layer
+out_dir     <- "results_pseudobulk"
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+# Metadata columns in your Seurat object
+donor_col  <- "donor"            # donor ID column (may contain underscores)
+group_col  <- "group"            # will be created: ND/T1D/(Excluded)
+sample_col <- "samples"          # will be created: donor__group (ND/T1D only)
+cluster_col <- "seurat_clusters" # used for mapping to cell types
+celltype_col <- "celltype"       # will be created
+
+# Donor sets (edit as needed)
+healthy_donors <- c(
+  "HPAP112","HPAP038","HPAP024","HPAP019","HPAP029","HPAP008","HPAP045"
+)
+
+t1d_donors <- c(
+  "HPAP123","HPAP084","HPAP102","HPAP135","HPAP020","HPAP023","HPAP028",
+  "HPAP071","HPAP041","HPAP087"
+)
+
+excluded_stage1  <- c(0)  # excluded explicitly
+
+# Cluster -> cell type map (edit as needed), only 26 is correct
+cluster_map <- c(
+  "0"  = "B cell",
+  "1"  = "B cell",
+  "2"  = "B cell",
+  "3"  = "B cell",
+  "4"  = "T cell",
+  "5"  = "B cell",
+  "6"  = "T cell",
+  "7"  = "T cell",
+  "8"  = "T cell",
+  "9"  = "T cell",
+  "10" = "T cell",
+  "11" = "NK",
+  "12" = "B cell",
+  "13" = "B cell",
+  "14" = "B cell",
+  "15" = "T cell",
+  "16" = "B cell",
+  "17" = "NK/ILC",
+  "18" = "T cell",
+  "19" = "Monocyte",
+  "20" = "B cell",
+  "21" = "Cycling",
+  "22" = "T cell",
+  "23" = "Plasmablast",
+  "24" = "B cell",
+  "25" = "T cell",
+  "26" = "B cell"
+)
+
+# DEG defaults
+deg_target_celltype <- "Monocyte"  # must match cleaned labels (spaces removed)
+deg_min_cells_per_sample <- 20
+deg_min_reads_per_gene   <- 5
+deg_min_prop_samples     <- 0.25
+deg_lfc_thresh           <- 0.5
+deg_padj_thresh          <- 0.05
+
+# Heatmap
+heatmap_top_n <- 30
+
+# External list (optional overlap check)
+#top100_path <- "/data/temp/Top100Genes_T1D_HumanOrthologs.csv"
+#op100_symbol_col <- "human_symbol"
+```
+
+```{r sload_object}
+# =========================
+# 1) Load Seurat Object
+# =========================
+obj <- readRDS(in_rds)
+obj
+```
+
+```{r prepare metadata}
+# =========================
+# 2) Prepare metadata: donor_norm, group, sample_id
+# =========================
+md <- as.data.frame(obj[[]])
+
+stopifnot(donor_col %in% colnames(md))
+
+# Normalize donor IDs: HPAP_107 -> HPAP107
+md$donor_norm <- gsub("_", "", as.character(md[[donor_col]]))
+
+# Assign group
+md[[group_col]] <- NA_character_
+md[[group_col]][md$donor_norm %in% healthy_donors]  <- "ND"
+md[[group_col]][md$donor_norm %in% t1d_donors]      <- "T1D"
+md[[group_col]][md$donor_norm %in% excluded_stage1] <- "Excluded_Stage1"
+
+# sample_id = donor_norm__group for ND/T1D only; otherwise donor_norm
+md[[sample_col]] <- md$donor_norm
+keep_encode <- !is.na(md[[group_col]]) & md[[group_col]] %in% c("ND","T1D")
+md[[sample_col]][keep_encode] <- paste0(md$donor_norm[keep_encode], "__", md[[group_col]][keep_encode])
+
+# Write back
+obj@meta.data <- md
+
+# Keep ND/T1D only for downstream
+# after obj@meta.data <- md
+stopifnot(group_col %in% colnames(obj@meta.data))
+
+keep_cells <- rownames(obj@meta.data)[ obj@meta.data[[group_col]] %in% c("ND","T1D") ]
+keep_cells <- intersect(colnames(obj), keep_cells)
+obj <- subset(obj, cells = keep_cells)
+
+cat("Group counts:\n")
+print(table(obj@meta.data[[group_col]]))
+cat("Unique samples (donor__group): ", length(unique(obj@meta.data[[sample_col]])), "\n")
+
+
+# =========================
+# 3) Choose Harmony cluster column (author's) and map to celltype
+# =========================
+
+# Prefer the author's Harmony clustering column if present
+if ("cluster" %in% colnames(obj@meta.data)) {
+  cluster_col_use <- "cluster"         # Harmony clusters saved by author
+} else if ("seurat_clusters" %in% colnames(obj@meta.data)) {
+  cluster_col_use <- "seurat_clusters" # fallback
+} else {
+  stop("No cluster column found: expected 'cluster' or 'seurat_clusters'.")
+}
+
+cat("Using cluster column for celltype mapping: ", cluster_col_use, "\n")
+
+# Map cluster -> celltype (write into meta.data explicitly)
+cl <- as.character(obj@meta.data[[cluster_col_use]])
+ct <- unname(cluster_map[cl])
+
+if (any(is.na(ct))) {
+  bad <- sort(unique(cl[is.na(ct)]))
+  stop("Unmapped clusters found in cluster_map: ", paste(bad, collapse = ", "))
+}
+
+obj@meta.data[[celltype_col]] <- gsub("\\s+", "", ct)
+obj@meta.data[[celltype_col]] <- factor(obj@meta.data[[celltype_col]])
+
+Idents(obj) <- obj@meta.data[[celltype_col]]
+
+cat("Cell types (levels):\n")
+print(levels(Idents(obj)))
+
+# =========================
+# 4) Plot using author's Harmony UMAP
+# =========================
+if (!("umap" %in% Reductions(obj))) stop("No reduction named 'umap' in this object.")
+
+celltypes <- levels(factor(obj[[celltype_col]][,1]))
+pal <- setNames(scales::hue_pal(l = 55, c = 120)(length(celltypes)), celltypes)
+
+DimPlot(
+  obj,
+  reduction = "umap",
+  group.by  = celltype_col,
+  cols      = pal,
+  pt.size   = 0.35,
+  alpha     = 0.8,
+  raster    = FALSE,
+  label     = TRUE,
+  repel     = TRUE,
+  label.box = TRUE
+) +
+  NoAxes() +
+  ggtitle("HPAP PLN UMAP") +
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA)
+  )
+saveRDS(obj,"/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/MAI_T1D/pln_result_annotated.rds")
+```
