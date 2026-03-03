@@ -7,44 +7,18 @@ pacman::p_load(tidyverse, plyr, magrittr, stats, dplyr, limma, RColorBrewer, gpl
                reactome.db, GSVA, msigdbr, gglasso, MatrixGenerics, VennDiagram, 
                mikropml, glmnet, scales, stats, caret, nnet, pROC)
 
-#BiocManager::install('EnhancedVolcano')
+BiocManager::install('EnhancedVolcano')
 library(EnhancedVolcano)
 library(dplyr)
-#BiocManager::install("clusterProfiler")
+BiocManager::install("clusterProfiler")
 library(clusterProfiler)
 library(VennDiagram)
 library(grid)
 
-# MSIGDBR Pathways ----
-msigdbr_collections() 
-# C8
-CellTypeMSigDB_gene_sets <- msigdbr(species="Mus musculus", category="C8")
-mm_c8_sets <- split(CellTypeMSigDB_gene_sets$gene_symbol, CellTypeMSigDB_gene_sets$gs_name)
-mm_c8_df <- data.frame(
-  gs_name = rep(names(mm_c8_sets), sapply(mm_c8_sets, length)),
-  gene_symbol = unlist(mm_c8_sets)
-)
 
-
-# Hallmark
-hallmark <- msigdbr(species = "Mus musculus", category  = "H")
-mm_h_sets <- split(hallmark$gene_symbol, hallmark$gs_name)
-mm_h_df <- data.frame(
-  gs_name = rep(names(mm_h_sets), sapply(mm_h_sets, length)),
-  gene_symbol = unlist(mm_h_sets)
-)
-
-
-# KEGG
-kegg_all <- msigdbr(species="Mus musculus", category="C2", subcategory="CP:KEGG_LEGACY")
-mm_kegg_sets <- split(kegg_all$gene_symbol, kegg_all$gs_name)
-mm_kegg_df <- data.frame(
-  gs_name = rep(names(mm_kegg_sets), sapply(mm_kegg_sets, length)),
-  gene_symbol = unlist(mm_kegg_sets)
-)
 
 # --- Final combined TERM2GENE data frame ---
-mm_all_df <- rbind(mm_c8_df, mm_h_df, mm_kegg_df)
+mm_all_df <- rbind(mm_h_df, mm_kegg_df)
 
 getwd()
 
@@ -137,25 +111,24 @@ names(keyvals) <- ifelse(results_early$log2FoldChange > 1 & results_early$pvalue
                                        ifelse(results_early$log2FoldChange < -1 & results_early$pvalue < 0.05, "p-value < 0.05 & log[2]FC < -1",
                                               "Not Significant"))
 
-# Define point size: larger for FDR-significant points
-point_sizes <- ifelse(results_early$padj < 0.1, 3.5, 2.0)
+point_sizes <-  2.0
 
 # Genes to label
 genes_to_label_early <- c(
-  "Cxcl15","Cfd","Retn",#Up-TNF-a
-  "Cd40lg","Cd6","Ctla4","Ms4a1","Gata1",#Down-TNF-a
-  "Ccr8",       # Chemokine receptor on monocytes/macrophages and some DCs
-  "Fgg",#Fibrinogen gamma chain, involved in coagulation and inflammation
-  "Ly6G",#Granulocyte marker (neutrophils), involved in innate immune responses
-  "Ctla4",#Inhibitiry receptor
-  "Cd163l1",    # CD163-like; scavenger receptor, myeloid lineage
-  "Cpvl",       # Expressed in macrophages/monocytes; carboxypeptidase
-  "Il23r",      # IL-23 receptor, present on monocytes/macrophages and Th17 cells
-  "Lgals12",    # Galectin, expressed in macrophages and adipocytes
-  "Retnlg",     # Resistin-like molecule gamma, neutrophils and myeloid-derived cells
-  "S100a8",     # Strongly expressed in neutrophils and inflammatory monocytes
-  "S100a9",     # Partner of S100a8, same myeloid pattern
-  "Vnn3"        # Vanin-3, GPI-anchored protein in neutrophils and macrophages
+  "Cxcl15","Cfd","Retn",
+  "Cd40lg","Cd6","Ctla4","Ms4a1","Gata1",
+  "Ccr8",       
+  "Fgg",
+  "Ly6G",
+  "Ctla4",
+  "Cd163l1",   
+  "Cpvl",      
+  "Il23r",      
+  "Lgals12",    
+  "Retnlg",     
+  "S100a8",     
+  "S100a9",     
+  "Vnn3"       
 )
 
 
@@ -170,7 +143,7 @@ EnhancedVolcano(results_early,
                 title = 'Early Timepoint',
                 pCutoff = 0.05,  
                 FCcutoff = 1, 
-                pointSize = point_sizes,  # Increase size for FDR-significant points
+                pointSize = point_sizes,  
                 labSize = 8,
                 colAlpha = 0.75,
                 legendLabels = c("Not Significant", "p-value < 0.05", "FDR < 0.1", "Both"),
@@ -178,13 +151,13 @@ EnhancedVolcano(results_early,
                 drawConnectors = TRUE,
                 widthConnectors = 0.5,
                 boxedLabels = TRUE,
-                xlab = expression("log"[2] ~ "Fold Change (Progressor / Non-Progressor)"),  # Subscript in x-axis
-                ylab = expression("-log"[10] ~ "(p-value)"),  # Subscript in y-axis
+                xlab = expression("log"[2] ~ "Fold Change (Progressor / Non-Progressor)"), 
+                ylab = expression("-log"[10] ~ "(p-value)"),  
                 xlim = c(-8, 8),  # Set x-axis from -8 to 8
                 ylim = c(0, 6),  # Set y-axis limit to 6
                 max.overlaps = 40,
-                colCustom = keyvals,  # Apply custom colors
-                caption = NULL  # Removes watermark text
+                colCustom = keyvals, 
+                caption = NULL  
 )
 
 
@@ -224,38 +197,36 @@ keyvals <- ifelse(results_Intermediate$log2FoldChange > 1 & results_Intermediate
 names(keyvals) <- ifelse(results_Intermediate$log2FoldChange > 1 & results_Intermediate$pvalue < 0.05, "p-value < 0.05 & log[2]FC > 1",
                                        ifelse(results_Intermediate$log2FoldChange < -1 & results_Intermediate$pvalue < 0.05, "p-value < 0.05 & log[2]FC < -1",
                                               "Not Significant"))
-
-# Define point size: larger for FDR-significant points
-point_sizes <- ifelse(results_Intermediate$padj < 0.1, 3.5, 2.0)
+point_sizes <-  2.0
 
 # Genes to label
 
 genes_to_label_intermediate <- c("Cd300ld5", "Mlf1", "Mmp3",
-                                 "Fpr1", # Formyl peptide receptor key in neutrophil chemotaxis
-                                 "Retn",     # Resistin, involved in inflammatory macrophage responses
-                                 "Defb1",    # Beta-defensin 1, antimicrobial peptide
-                                 "Ifi44",    # Interferon-induced gene, antiviral innate immunity
-                                 "Cxcl15",   # Chemokine expressed in epithelial and innate cells
-                                 "Rtp4",     # IFN-inducible gene, linked to innate antiviral responses
-                                 "Ido1",     # Indoleamine 2,3-dioxygenase, regulates dendritic cells and innate tolerance
-                                 "Gzmk",     # Granzyme K, expressed in cytotoxic innate-like lymphocytes (NKT/NK)
-                                 "Xcl1",      # Chemokine from NK and dendritic cells
-                                 "Cd4",      # Canonical helper T cell surface marker
-                                 "Cd7",      #T-cell and NK cell surface molecule, immune signaling.
-                                 "Cd69",     # Early T cell activation marker
-                                 "Rorc",     # Master transcription factor for Th17 differentiation
-                                 "Ighg1",    # Immunoglobulin heavy chain gamma 1 (B cell/plasma cell function)
-                                 "Xcl1",     # Also produced by CD8+ T cells
-                                 "Fcrl6",    # Fc receptor–like molecule, B cell associated
-                                 "Fpr1",    #Formyl peptide receptor 1, neutrophil chemotaxis, innate immunity.
-                                 "Ifit1",    # Interferon-induced protein (in both innate and adaptive cells)
-                                 "Ifit3",     # Same as above
-                                 "Klra4",  #NK cell receptors.
-                                 "Klra5", #NK cell receptors.
-                                 "Ifi208",#Interferon-inducible family members
-                                 "Btnl9",#Linked to T cell regulation.
-                                 "Ido1",#Key immunoregulatory enzyme (tryptophan metabolism, T cell suppression).
-                                 "Rorc"#Transcription factor RORγt, master regulator of Th17 differentiation.
+                                 "Fpr1",
+                                 "Retn",     
+                                 "Defb1",   
+                                 "Ifi44",   
+                                 "Cxcl15",   
+                                 "Rtp4",     
+                                 "Ido1",     
+                                 "Gzmk",     
+                                 "Xcl1",      
+                                 "Cd4",    
+                                 "Cd7",     
+                                 "Cd69",     
+                                 "Rorc",    
+                                 "Ighg1",    
+                                 "Xcl1",     
+                                 "Fcrl6",   
+                                 "Fpr1",    
+                                 "Ifit1",    
+                                 "Ifit3",     
+                                 "Klra4",  
+                                 "Klra5", 
+                                 "Ifi208",
+                                 "Btnl9",
+                                 "Ido1",
+                                 "Rorc"
 )
 
 
@@ -267,7 +238,7 @@ EnhancedVolcano(results_Intermediate,
                 title = 'Intermediate Timepoint',
                 pCutoff = 0.05,  
                 FCcutoff = 1, 
-                pointSize = point_sizes,  # Increase size for FDR-significant points
+                pointSize = point_sizes, 
                 labSize = 8,
                 colAlpha = 0.75,
                 legendLabels = c("Not Significant", "p-value < 0.05", "FDR < 0.1", "Both"),
@@ -275,12 +246,12 @@ EnhancedVolcano(results_Intermediate,
                 boxedLabels = TRUE,
                 drawConnectors = TRUE,
                 widthConnectors = 0.5,
-                xlab = expression("log"[2] ~ "Fold Change (Progressor / Non-Progressor)"),  # Subscript in x-axis
-                ylab = expression("-log"[10] ~ "(p-value)"),  # Subscript in y-axis
-                xlim = c(-8, 8),  # Updated x-axis limits
+                xlab = expression("log"[2] ~ "Fold Change (Progressor / Non-Progressor)"),  
+                ylab = expression("-log"[10] ~ "(p-value)"),  
+                xlim = c(-8, 8),  
                 ylim = c(0, 6),  
-                colCustom = keyvals,  # Apply custom colors
-                caption = NULL  # Removes watermark text
+                colCustom = keyvals,  
+                caption = NULL 
 )
 
 
@@ -319,19 +290,18 @@ names(keyvals) <- ifelse(results_Late$log2FoldChange > 1 & results_Late$pvalue <
                                        ifelse(results_Late$log2FoldChange < -1 & results_Late$pvalue < 0.05, "p-value < 0.05 & log[2]FC < -1",
                                               "Not Significant"))
 
-# Define point size: larger for FDR-significant points
-point_sizes <- ifelse(results_Late$padj < 0.1, 3.5, 2.0)
+point_sizes <-  2.0
 
 # Genes to label
 genes_to_label_late <- c("Ighg2c", "Il31ra", "Tafa2","Cd7", "Il13", "Il17b", "Il17re", "Prf1", "Rorc", "Trbc2", "Tnfrsf17", "Trcg1", "Cd163",    # Classic M2 macrophage scavenger receptor
-                         "Cd209b",   # DC-SIGN family, expressed on dendritic cells
-                         "Vnn1",#involved in inflammation and oxidative stress.
-                         "Rorc",#Transcription factor RORγt, essential for Th17 differentiation
-                         "Cxcl17", #Chemokine, attracts monocytes and dendritic cells, mucosal immunity.
-                         "Ccl17",#Chemokine (TARC), recruits Th2 cells
-                         "Ccr8",#Chemokine receptor, expressed on Th2/Tregs, immune trafficking.
-                         "Cxcl3",#Chemokine, neutrophil recruitment.
-                         "Tox" #Transcription factor regulating T cell development/exhaustion.
+                         "Cd209b",   
+                         "Vnn1",
+                         "Rorc",
+                         "Cxcl17", 
+                         "Ccl17",
+                         "Ccr8",
+                         "Cxcl3",
+                         "Tox" 
 )  
 
 
@@ -345,7 +315,7 @@ EnhancedVolcano(results_Late,
                 boxedLabels = TRUE,
                 pCutoff = 0.05,  
                 FCcutoff = 1,  
-                pointSize = point_sizes,  # Increase size for FDR-significant points
+                pointSize = point_sizes,  
                 labSize = 8,
                 colAlpha = 0.75,
                 legendLabels = c("Not Significant", "p-value < 0.05", "FDR < 0.1", "Both"),
@@ -353,12 +323,12 @@ EnhancedVolcano(results_Late,
                 drawConnectors = TRUE,
                 widthConnectors = 0.5,
                 max.overlaps=30,
-                xlab = expression("log"[2] ~ "Fold Change (Progressor / Non-Progressor)"),  # Subscript in x-axis
-                ylab = expression("-log"[10] ~ "(p-value)"),  # Subscript in y-axis
-                xlim = c(-8, 8),  # X-axis range
-                ylim = c(0, 6),  # Y-axis range
-                colCustom = keyvals,  # Apply custom colors
-                caption = NULL  # Removes watermark text
+                xlab = expression("log"[2] ~ "Fold Change (Progressor / Non-Progressor)"), 
+                ylab = expression("-log"[10] ~ "(p-value)"), 
+                xlim = c(-8, 8),  
+                ylim = c(0, 6), 
+                colCustom = keyvals,  
+                caption = NULL  
 )
 
 
@@ -368,7 +338,7 @@ write.csv(results_Late, file = "/Users/jyotirmoyroy/Desktop/T1S_Immunometabolism
 
 #GSEA Analysis----
 
-
+msigdbr_collections() 
 
 # Hallmark
 hallmark <- msigdbr(species = "Mus musculus", category  = "H")
@@ -404,17 +374,17 @@ lfc_vector_early  <- sort(lfc_vector_early,  decreasing = TRUE)
 
 
 gsea_results_early <- GSEA(
-  geneList = lfc_vector_early, # Your ordered ranked gene list for Islet
-  minGSSize = 5, # Minimum gene set size
-  maxGSSize = 500, # Maximum gene set size
-  pvalueCutoff = 1, # p-value cutoff
-  eps = 0, # Boundary for calculating the p value
-  seed = TRUE, # Set seed for reproducibility
-  pAdjustMethod = "BH", # Benjamini-Hochberg correction
-  TERM2GENE = mm_all_df  # Use the new data frame
+  geneList = lfc_vector_early, 
+  minGSSize = 5, 
+  maxGSSize = 500, 
+  pvalueCutoff = 1,
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = mm_all_df  
 )
 
-# Extract results for Islet
+# Extract results for Early
 gsea_results_early_df <- as.data.frame(gsea_results_early)
 
 
@@ -431,19 +401,19 @@ lfc_vector_intermediate  <- lfc_vector_intermediate[!is.na(lfc_vector_intermedia
 lfc_vector_intermediate  <- sort(lfc_vector_intermediate,  decreasing = TRUE)
 
 
-# Perform GSEA for Islet
+# Perform GSEA for Intermediate
 gsea_results_intermediate <- GSEA(
-  geneList = lfc_vector_intermediate, # Your ordered ranked gene list for Islet
-  minGSSize = 5, # Minimum gene set size
-  maxGSSize = 500, # Maximum gene set size
-  pvalueCutoff = 1, # p-value cutoff
-  eps = 0, # Boundary for calculating the p value
-  seed = TRUE, # Set seed for reproducibility
-  pAdjustMethod = "BH", # Benjamini-Hochberg correction
-  TERM2GENE = mm_all_df  # Use the new data frame
+  geneList = lfc_vector_intermediate, 
+  minGSSize = 5, 
+  maxGSSize = 500,
+  pvalueCutoff = 1,
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = mm_all_df 
 )
 
-# Extract results for Islet
+# Extract results for Intermediate
 gsea_results_intermediate_df <- as.data.frame(gsea_results_intermediate)
 
 #### Late -----
@@ -458,19 +428,19 @@ lfc_vector_Late  <- lfc_vector_Late[!is.na(lfc_vector_Late)]
 # Sort decreasing (required by clusterProfiler::GSEA)
 lfc_vector_Late  <- sort(lfc_vector_Late,  decreasing = TRUE)
 
-# Perform GSEA for Islet
+# Perform GSEA for Late
 gsea_results_late <- GSEA(
-  geneList = lfc_vector_Late, # Your ordered ranked gene list for Islet
-  minGSSize = 5, # Minimum gene set size
-  maxGSSize = 500, # Maximum gene set size
-  pvalueCutoff = 1, # p-value cutoff
-  eps = 0, # Boundary for calculating the p value
-  seed = TRUE, # Set seed for reproducibility
-  pAdjustMethod = "BH", # Benjamini-Hochberg correction
-  TERM2GENE = mm_all_df  # Use the new data frame
+  geneList = lfc_vector_Late, 
+  minGSSize = 5, 
+  maxGSSize = 500, 
+  pvalueCutoff = 1,
+  eps = 0, 
+  seed = TRUE,
+  pAdjustMethod = "BH", 
+  TERM2GENE = mm_all_df  
 )
 
-# Extract results for Islet
+# Extract results for Late
 gsea_results_late_df <- as.data.frame(gsea_results_late)
 
 #### Combined GSEA----
@@ -488,7 +458,7 @@ head(combined_gsea_df)
 # Save the combined data frame to a CSV file
 write.csv(combined_gsea_df, "/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/GSEA_NODProgressorVsNonProgressor_AllTimepoints.csv", row.names = FALSE)
 
-# Filter pathways where NES >= 1 or <= -1 AND pvalue < 0.05 for any condition
+# Filter pathways where NES >= 1 or <= -1 AND pvalue < 0.05 for any stage
 filtered_gsea_df <- combined_gsea_df[
   ((combined_gsea_df$early_NES >= 1 | combined_gsea_df$early_NES <= -1) & combined_gsea_df$early_p.adjust < 0.1) |
     ((combined_gsea_df$intermediate_NES >= 1 | combined_gsea_df$intermediate_NES <= -1) & combined_gsea_df$intermediate_p.adjust < 0.1) |
@@ -563,7 +533,7 @@ filtered_gsea_immune_top <- filtered_gsea_long %>%
       timepoint == "late" ~ "Late",
       TRUE ~ timepoint
     ),
-    ID = factor(ID, levels = Immune_Metabolic_pathways)  # <-- fix order here
+    ID = factor(ID, levels = Immune_Metabolic_pathways)  # arrange order here
   )
 
 
@@ -575,17 +545,17 @@ plot <- ggplot(filtered_gsea_immune_top, aes(x = timepoint, y = ID)) +
   labs(
     x = "Time",
     y = "Pathway",
-    color = bquote(bold("NES"))  # Bold NES in legend
+    color = bquote(bold("NES"))  # Bold NES 
   ) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size = 40, face = "bold"),
-    axis.text.y = element_text(size = 40),  # Adjust y-axis text size for readability
-    axis.title.x = element_text(size = 60),  # Increase x-axis title size
-    axis.title.y = element_text(size = 60),  # Increase y-axis title size
-    legend.text = element_text(size = 30),  # Increase legend text size
-    legend.title = element_text(size = 40, face = "bold"),  # Increase legend title size
+    axis.text.y = element_text(size = 40),  
+    axis.title.x = element_text(size = 60),  
+    axis.title.y = element_text(size = 60),  
+    legend.text = element_text(size = 30),  
+    legend.title = element_text(size = 40, face = "bold"),  
     legend.position = "right",
-    plot.title = element_text(size = 30, face = "bold")  # Increase plot title size
+    plot.title = element_text(size = 30, face = "bold")  
   )
 
 plot
@@ -705,7 +675,6 @@ venn.plot <- venn.diagram(
   main.fontface = "bold"
 )
 
-# Draw it in viewer or export to file
 grid.newpage()
 grid.draw(venn.plot)
 
@@ -715,7 +684,6 @@ grid.draw(venn.plot)
 ### T1D----
 results_early$gene <- rownames(results_early)
 
-# Prepare the ranked list for Islet
 
 gsea_NOD<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/GSEA_NODProgressorVsNonProgressor_AllTimepoints.csv",
                    row.names = 1)
@@ -724,9 +692,8 @@ gsea_NOD<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure
 library(dplyr)
 library(stringr)
 
-## 1) Prepare the NOD "early" table
+## 1) Prepare the NOD Early Stage table
 T1D_GSEA_early <- gsea_NOD %>%
-  # ensure a Description column exists and is clean
   mutate(early_Description = ifelse(
     "early_Description" %in% names(gsea_NOD) & !is.na(early_Description) & early_Description != "",
     early_Description,
@@ -736,10 +703,10 @@ T1D_GSEA_early <- gsea_NOD %>%
   select(starts_with("early_")) %>%
   # strip the "early_" prefix so we end up with Description, NES, pvalue, etc.
   rename_with(~ sub("^early_", "", .x)) %>%
-  # trim / normalize (optional but helps matching)
+  # trim 
   mutate(Description = str_trim(Description))
 
-# Extract results for Islet
+# Extract results for Early Stage T1D
 T1D_GSEA_early <- as.data.frame(T1D_GSEA_early)
 T1D_GSEA_early$ID<-T1D_GSEA_early$Description
 
@@ -749,17 +716,17 @@ results_cancer <- results_cancer[order(results_cancer$stat, decreasing = TRUE), 
 lfc_vector_cancer <- setNames(results_cancer$stat, results_cancer$gene)
 
 Cancer_GSEA <- GSEA(
-  geneList = lfc_vector_cancer, # Your ordered ranked gene list for Islet
-  minGSSize = 5, # Minimum gene set size
-  maxGSSize = 500, # Maximum gene set size
-  pvalueCutoff = 1, # p-value cutoff
-  eps = 0, # Boundary for calculating the p value
-  seed = TRUE, # Set seed for reproducibility
-  pAdjustMethod = "BH", # Benjamini-Hochberg correction
-  TERM2GENE = mm_all_df  # Use the new data frame
+  geneList = lfc_vector_cancer, 
+  minGSSize = 5, 
+  maxGSSize = 500, 
+  pvalueCutoff = 1, 
+  eps = 0,
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = mm_all_df  
 )
 
-# Extract results for Islet
+# Extract results for Cancer
 Cancer_GSEA <- as.data.frame(Cancer_GSEA)
 write.csv(Cancer_GSEA, "/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/Cancer_GSEA_Analysis.csv")
 
@@ -768,17 +735,17 @@ results_EAE$gene <- rownames(results_EAE)
 results_EAE <- results_EAE[order(results_EAE$stat, decreasing = TRUE), ]
 lfc_vector_EAE <- setNames(results_EAE$stat, results_EAE$gene)
 EAE_GSEA <- GSEA(
-  geneList = lfc_vector_EAE, # Your ordered ranked gene list for Islet
-  minGSSize = 5, # Minimum gene set size
-  maxGSSize = 500, # Maximum gene set size
-  pvalueCutoff = 1, # p-value cutoff
-  eps = 0, # Boundary for calculating the p value
-  seed = TRUE, # Set seed for reproducibility
-  pAdjustMethod = "BH", # Benjamini-Hochberg correction
-  TERM2GENE = mm_all_df  # Use the new data frame
+  geneList = lfc_vector_EAE, 
+  minGSSize = 5, 
+  maxGSSize = 500, 
+  pvalueCutoff = 1, 
+  eps = 0, 
+  seed = TRUE, 
+  pAdjustMethod = "BH", 
+  TERM2GENE = mm_all_df  
 )
 
-# Extract results for Islet
+# Extract results for EAE
 EAE_GSEA <- as.data.frame(EAE_GSEA)
 write.csv(EAE_GSEA, "/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/EAE_GSEA_Analysis.csv")
 
@@ -829,7 +796,7 @@ gsea_combined <- gsea_combined %>%
 gsea_combined <- gsea_combined %>%
   mutate(
     neglog10padj = -log10(p.adjust ),
-    ID = factor(ID, levels = rev(filtered_pathways))  # use rev() if you want top-to-bottom like list
+    ID = factor(ID, levels = rev(filtered_pathways))  
   )
 
 # Plot
@@ -874,7 +841,7 @@ counts_AT <- flexiDEG.function1(counts_AT, meta_AT, # Run Function 1
 counts_AT <- counts_AT[!grepl("^Gm[0-9]", rownames(counts_AT)), ]
 
 # DESeq2 analysis for Adoptive Transfer
-# set refs
+# set references
 meta_AT$Group <- relevel(factor(meta_AT$Group), ref = "OVA")
 meta_AT$Time  <- relevel(factor(meta_AT$Time),  ref = "D0")
 
@@ -888,7 +855,7 @@ res_BDC_vs_OVA_d10 <- results(
   dds_AT,
   contrast = list(c("Group_BDC_vs_OVA","TimeD10.GroupBDC"))
 )
-# Import
+
 AT_genes_D10  <- as.data.frame(res_BDC_vs_OVA_d10);  AT_genes_D10$gene  <- rownames(res_BDC_vs_OVA_d10)
 write.csv(AT_genes_D10,
           "/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/DEG_DESEQ_BDCvsOVA_AdoptiveTransfer_Day10.csv",
@@ -910,7 +877,6 @@ gsea_results_AT <- GSEA(
   eps           = 0,
   seed          = TRUE,
   pAdjustMethod = "BH",
-  #keyType       = "SYMBOL",       # <- tell it explicitly
   TERM2GENE     = mm_all_df
 )
 gsea_results_AT_df <- as.data.frame(gsea_results_AT)
@@ -930,7 +896,7 @@ results_NOD_early$padj[is.na(results_NOD_early$padj)] <- 1
 AT_genes_D10$padj[is.na(AT_genes_D10$padj)] <- 1
 
 
-# Step 2: Merge the results and categorize based on thresholds
+# Merge the results and categorize based on thresholds
 results_NOD_early$logFC_NOD <- results_NOD_early$log2FoldChange
 results_NOD_early$pval_NOD <- results_NOD_early$pvalue
 results_NOD_early <- results_NOD_early[, !colnames(results_NOD_early) %in% c("log2FoldChange", "pvalue")]
@@ -942,7 +908,6 @@ AT_genes_D10 <- AT_genes_D10[, !colnames(AT_genes_D10) %in% c("log2FoldChange", 
 results_NOD_early$gene <- rownames(results_NOD_early)
 AT_genes_D10$gene <- rownames(AT_genes_D10)
 
-# Merge the results
 merged_results <- merge(results_NOD_early, AT_genes_D10, by = "gene", suffixes = c("_NOD", "_AT"))
 
 # Thresholds
@@ -985,33 +950,33 @@ write.csv(merged_results,
 
 
 
-# Define the genes you want to label
-genes_to_label <- c( #NOD
-  "Cxcl15","Cfd","Retn",#Up-TNF-a
-  "Cd40lg","Cd6","Ctla4","Ms4a1","Gata1",#Down-TNF-a
-  "Ccr8",       # Chemokine receptor on monocytes/macrophages and some DCs
-  "Fgg",#Fibrinogen gamma chain, involved in coagulation and inflammation
-  "Ly6G",#Granulocyte marker (neutrophils), involved in innate immune responses
-  "Ctla4",#Inhibitiry receptor
-  "Cd163l1",    # CD163-like; scavenger receptor, myeloid lineage
-  "Cpvl",       # Expressed in macrophages/monocytes; carboxypeptidase
-  "Il23r",      # IL-23 receptor, present on monocytes/macrophages and Th17 cells
-  "Lgals12",    # Galectin, expressed in macrophages and adipocytes
-  "Retnlg",     # Resistin-like molecule gamma, neutrophils and myeloid-derived cells
-  "S100a8",     # Strongly expressed in neutrophils and inflammatory monocytes
-  "S100a9",     # Partner of S100a8, same myeloid pattern
-  "Vnn3",        # Vanin-3, GPI-anchored protein in neutrophils and macrophages
+# Genes to be labelled
+genes_to_label <- c( 
+  "Cxcl15","Cfd","Retn",
+  "Cd40lg","Cd6","Ctla4","Ms4a1","Gata1",
+  "Ccr8",      
+  "Fgg",
+  "Ly6G",
+  "Ctla4",
+  "Cd163l1",    
+  "Cpvl",       
+  "Il23r",      
+  "Lgals12",    
+  "Retnlg",    
+  "S100a8",     
+  "S100a9",     
+  "Vnn3",        
   #AT Only
-  "Ctse",     # Cathepsin E, antigen processing
-  "Cxcl13",   # chemokine, B/T cell trafficking
-  "Il31ra",   # cytokine receptor (IL-31 signaling)
-  "Mal",      # T-cell differentiation / raft signaling protein
-  "Mmd2",     # monocyte-to-macrophage differentiation
-  "Cd209a",   # DC-SIGN, dendritic cell marker
-  "Defb25",   # beta-defensin, antimicrobial peptide
-  "Mreg",     # macrophage regulator
-  "Spib",     # transcription factor, B cell/DC lineage
-  "Treml2",    # TREM-like receptor, myeloid cells
+  "Ctse",     
+  "Cxcl13",   
+  "Il31ra",   
+  "Mal",      
+  "Mmd2",     
+  "Cd209a",   
+  "Defb25",   
+  "Mreg",     
+  "Spib",     
+  "Treml2",    
   #Both
   "Pck1",
   "Pdk4",
@@ -1020,7 +985,7 @@ genes_to_label <- c( #NOD
   "Lep",
   "Aldh1a7"
   
-)  # <-- put your gene names here
+) 
 
 
 ggplot(merged_results, aes(x = logFC_NOD, y = logFC_AT)) +
@@ -1055,17 +1020,15 @@ ggplot(merged_results, aes(x = logFC_NOD, y = logFC_AT)) +
   geom_label_repel(
     data = subset(merged_results, gene %in% genes_to_label),
     aes(label = gene),
-    size = 6,                          # your current text size ~6 was big; adjust as you like
+    size = 6,                        
     box.padding = 0.3,
-    point.padding = 0.4,               # push label off the point so a segment is drawn
+    point.padding = 0.4,               
     max.overlaps = Inf,
-    force = 2,                         # stronger repulsion
-    min.segment.length = 0,            # always draw a segment if displaced
+    force = 2,                         
+    min.segment.length = 0,            
     segment.color = "black",
     segment.size = 0.8,
     arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
-    
-    # label box styling (EnhancedVolcano style)
     fill = "white",                    # label background
     label.size = 0.4,                  # border thickness
     label.r = unit(0.08, "lines")      # corner radius (0 for square corners)
@@ -1093,9 +1056,8 @@ gsea_AT<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 
                   row.names = 1)
 
 
-## 1) Prepare the NOD "early" table
+## Prepare the NOD Early Stage table
 nod_early <- gsea_NOD %>%
-  # ensure a Description column exists and is clean
   mutate(early_Description = ifelse(
     "early_Description" %in% names(gsea_NOD) & !is.na(early_Description) & early_Description != "",
     early_Description,
@@ -1105,10 +1067,9 @@ nod_early <- gsea_NOD %>%
   dplyr::select(starts_with("early_")) %>%
   # strip the "early_" prefix so we end up with Description, NES, pvalue, etc.
   rename_with(~ sub("^early_", "", .x)) %>%
-  # trim / normalize (optional but helps matching)
   mutate(Description = str_trim(Description))
 
-## 2) Prepare the AT table
+## Prepare the AT table
 at_tbl <- gsea_AT %>%
   mutate(
     Description = ifelse(
@@ -1119,12 +1080,12 @@ at_tbl <- gsea_AT %>%
     Description = str_trim(Description)
   )
 
-## 3) Merge on Description (inner join by default; use full_join if you want all)
+## Merge on Description 
 merged_NOD_AT <- inner_join(
   nod_early,
   at_tbl,
   by = "Description",
-  suffix = c("_NOD", "_AT")   # custom suffixes instead of .x / .y
+  suffix = c("_NOD", "_AT")  
 )
 
 write.csv(merged_NOD_AT,
@@ -1155,7 +1116,7 @@ subset_df <- merged_NOD_AT %>%
     NES_NOD, p.adjust_NOD,
     NES_AT, p.adjust_AT
   ) %>%
-  as_tibble()   # ensure tibble for pivot
+  as_tibble()  
 
 plot_df <- bind_rows(
   subset_df %>%
@@ -1182,7 +1143,7 @@ plot_df <- bind_rows(
   )
 
 
-# Plot (two columns: NOD vs AT) with y in EXACT Immune_Metabolic_pathways order
+
 plot <- ggplot(plot_df, aes(x = dataset, y = ID)) +
   geom_point(aes(size = bubble_size, color = NES)) +
   scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
