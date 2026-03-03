@@ -1,11 +1,11 @@
 # T1D_Prediction Project Overview
 
 ## Main Figures 1-5
-Run `AllFunction.R` from `General Function` before running the main scripts. The script for each figure is uploaded as _FigX where X is the figure number in the main manuscript. The  "Human Data Processing" conatins `.Rmd` files for processing of human spleen and pln. Human Islet data was downloded from HPAP.
+Run `AllFunction.R` from `General Function` before running the main scripts. The script for each figure is uploaded as _FigX where X is the figure number in the main manuscript. The  "Human Data Processing" conatins `.Rmd` files for processing of human spleen and pln. Human Islet data was downloded from HPAP. All codes other than the SVC Model codes are in R.
 
 ## SVC Model Structure 
 
-Below is a high‑level overview of the repository directories and their contents:
+The code related to prediciton analysis using IN based T1D gene signature in SVC model is in `SVC_Model` subfolder. These codes are in python. Below is a high‑level overview of the repository directories and their contents inside `SVC_Model `:
 
 | Folder/File           | Purpose                                                      |
 | --------------------- | ------------------------------------------------------------ |
