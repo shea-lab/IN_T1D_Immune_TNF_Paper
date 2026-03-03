@@ -1,7 +1,7 @@
 # T1D_Prediction Project Overview
 
-## Figures 1-5
-Run "AllFunction.R" from "General Function" before running the main scripts. The script for each figure is uploaded as _FigX where X is the figure number in the main manuscript. The  "Human Data Processing" conatins ".Rmd" files for processing of human spleen and pln. Human Islet data was downloded from HPAP.
+## Main Figures 1-5
+Run `AllFunction.R` from `General Function` before running the main scripts. The script for each figure is uploaded as _FigX where X is the figure number in the main manuscript. The  "Human Data Processing" conatins `.Rmd` files for processing of human spleen and pln. Human Islet data was downloded from HPAP.
 
 ## SVC Model Structure 
 
