@@ -17,8 +17,6 @@ library(grid)
 
 
 
-# --- Final combined TERM2GENE data frame ---
-mm_all_df <- rbind(mm_h_df, mm_kegg_df)
 
 getwd()
 
