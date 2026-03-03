@@ -44,9 +44,8 @@ NOD_T1D_Timepoints$sample<-NULL
 Progressor <- subset(NOD_T1D_Timepoints, subset = group == "Progressor")
 NonProgressor <- subset(NOD_T1D_Timepoints, subset =  group == "Non-Progressor")
 
-# Single Datasets ####
-## ----Progressor-----
 
+## ----Progressor-----
 
 cellChat_Progressor  <- createCellChat(object = Progressor, group.by = "ident", assay = "RNA")
 CellChatDB <- CellChatDB.mouse # use CellChatDB.mouse if running on mouse data
@@ -78,7 +77,6 @@ ptm = Sys.time()
 groupSize <- as.numeric(table(cellChat_Progressor@idents))
 
 par(mfrow = c(1,1), xpd=TRUE)
-#netVisual_circle(cellChat_W6_Progressor@net$count, vertex.weight = groupSize, weight.scale = T, label.edge= F, title.name = "Number of interactions")
 netVisual_circle(cellChat_Progressor@net$weight, vertex.weight = groupSize, weight.scale = T, label.edge= F, title.name = "Interaction weights/strength-Week 6 Progressor")
 
 # Compute the network centrality scores
@@ -102,7 +100,6 @@ cellChat_NonProgressor@DB <- CellChatDB.use
 options(future.globals.maxSize = 1e9)  # Set limit to 1GB (adjust based on available memory)
 future::plan("multisession", workers = 7) 
 ### 2. Preprocessing the expression data
-# subset the expression data of signaling genes for saving computation cost
 cellChat_NonProgressor <- subsetData(cellChat_NonProgressor) # This step is necessary even if using the whole database
 
 cellChat_NonProgressor <- identifyOverExpressedGenes(cellChat_NonProgressor)
@@ -137,7 +134,6 @@ saveRDS(cellChat_NonProgressor, file = "/Users/jyotirmoyroy/Desktop/Immunometabo
 sessionInfo()
 
 
-# Multiple Datasets Comparison ####
 
 ## Progressor vs Non-Progressor ----
 getwd()
@@ -153,7 +149,6 @@ object.list <- list(NonProgressor = cellChat_NonProgressor, Progressor = cellCha
 cellchat_PvsNP <- mergeCellChat(object.list, add.names = names(object.list), cell.prefix = TRUE)
 
 ### 1. Identify altered interactions and cell populations 
-
 
 par(mfrow = c(1,1), xpd=TRUE)
 netVisual_diffInteraction(cellchat_PvsNP, weight.scale = T, measure = "weight", vertex.size.max = 5,vertex.label.cex = 2.2,top = 0.25)
@@ -183,16 +178,6 @@ gg1 + gg2
 ### 3.Compare outgoing (or incoming) signaling patterns associated with each cell population 
 library(ComplexHeatmap)
 i = 1
-# combining all the identified signaling pathways from different datasets 
-# pathway.union <- union(object.list[[i]]@netP$pathways, object.list[[i+1]]@netP$pathways)
-# ht1 = netAnalysis_signalingRole_heatmap(object.list[[i]], pattern = "outgoing", signaling = pathway.union, title = names(object.list)[i], width = 10, height = 18,font.size = 11,font.size.title = 14)
-# ht2 = netAnalysis_signalingRole_heatmap(object.list[[i+1]], pattern = "outgoing", signaling = pathway.union, title = names(object.list)[i+1], width = 10, height = 18,font.size = 11,font.size.title = 14)
-# draw(ht1 + ht2, ht_gap = unit(0.5, "cm"))
-# 
-# ht1 = netAnalysis_signalingRole_heatmap(object.list[[i]], pattern = "incoming", signaling = pathway.union, title = names(object.list)[i], width = 10, height = 18, color.heatmap = "GnBu",font.size = 11,font.size.title = 14)
-# ht2 = netAnalysis_signalingRole_heatmap(object.list[[i+1]], pattern = "incoming", signaling = pathway.union, title = names(object.list)[i+1], width = 10, height = 18, color.heatmap = "GnBu",font.size = 11,font.size.title = 14)
-# draw(ht1 + ht2, ht_gap = unit(0.5, "cm"))
-#dev.off()
 ht1 = netAnalysis_signalingRole_heatmap(object.list[[i]], pattern = "all", signaling = pathway.union, title = names(object.list)[i], width = 10, height = 18, color.heatmap = "OrRd",font.size = 11,font.size.title = 14)
 ht2 = netAnalysis_signalingRole_heatmap(object.list[[i+1]], pattern = "all", signaling = pathway.union, title = names(object.list)[i+1], width = 10, height = 18, color.heatmap = "OrRd",font.size = 11,font.size.title = 14)
 draw(ht1 + ht2, ht_gap = unit(0.5, "cm"))
@@ -202,7 +187,3 @@ netVisual_bubble(cellchat_PvsNP, sources.use = 2, targets.use = c(1,3:17),  comp
 
 
 saveRDS(cellchat_PvsNP, file = "/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/CellChat/cellchat_PvsNP.rds")
-
-Blue  : "#3A6EA5"
-  Green : "#3C8D5A"
-  Red   : "#B2182B"
