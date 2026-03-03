@@ -20,117 +20,8 @@ library(glmGamPoi)
 getwd()
 
 
-# # Extract raw counts and metadata to create SingleCellExperiment object
-# counts_blood <- T1D_Blood@assays$RNA$counts 
-# metadata_blood <- T1D_Blood@meta.data
-# # Set up metadata as desired for aggregation and DE analysis
-# metadata_blood$cluster_id <- factor(T1D_Blood@active.ident)
-# # Create single cell experiment object
-# sce_blood <- SingleCellExperiment(assays = list(counts = counts_blood), 
-#                                colData = metadata_blood)
-# dim(colData(sce_blood))
-# head(colData(sce_blood))
 
-
-#2. Map Early-Intermediate DEGs Genes ----
-
-# EarlyStageDEGs<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/DEG_DESEQ_Early_NOD_ProgressorVsNonProgressor.csv")
-# EarlyStageDEGs<-EarlyStageDEGs[abs(EarlyStageDEGs$log2FoldChange)>=1 & EarlyStageDEGs$pvalue<=0.05,]
-# 
-# IntermediateStageDEGs<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/DEG_DESEQ_Intermediate_NOD_ProgressorVsNonProgressor.csv")
-# IntermediateStageDEGs<-IntermediateStageDEGs[abs(IntermediateStageDEGs$log2FoldChange)>=1 & IntermediateStageDEGs$pvalue<=0.05,]
-# 
-# LateStageDEGs<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/DEG_DESEQ_Late_NOD_ProgressorVsNonProgressor.csv")
-# LateStageDEGs<-LateStageDEGs[abs(LateStageDEGs$log2FoldChange)>=1 & LateStageDEGs$pvalue<=0.05,]
-# 
-# early_genes <- unique(EarlyStageDEGs[[1]])
-# intermediate_genes <- unique(IntermediateStageDEGs[[1]])
-# late_genes <- unique(LateStageDEGs[[1]])
-# common_genes_all <- Reduce(intersect, 
-#                             list(early_genes, intermediate_genes, late_genes))
-# 
-# length(common_genes_all)
-# head(common_genes_all)
-# 
-# library(VennDiagram)
-# library(grid)
-# 
-# # Calm, Nature-style palette
-# custom_colors <- c(
-#   "#4DAC26",  
-#   "#C77C57" ,  
-#   "#9E4E5E" 
-# )
-# venn.plot <- venn.diagram(
-#   x = list(
-#     `Early Stage`        = early_genes,
-#     `Intermediate Stage` = intermediate_genes,
-#     `Late Stage`         = late_genes
-#   ),
-#   filename = NULL,
-#   fill = custom_colors,
-#   alpha = 0.7,
-#   lty = "blank",           # No borders
-#   cex = 2.4,               # Intersection numbers
-#   fontface = "bold",
-#   fontfamily = "Helvetica",
-#   cat.col = custom_colors,
-#   cat.cex = 2.2,
-#   cat.fontface = "bold",
-#   cat.fontfamily = "Helvetica",
-#   margin = 0.08
-# )
-# 
-# grid.newpage()
-# grid.draw(venn.plot)
-# 
-# 
-# genes_Early_Intermediate <- intersect(early_genes, intermediate_genes)
-# length(genes_Early_Intermediate)
-# genes_Early_Intermediate
-# 
-# 
-# genes_Early_Late <- intersect(early_genes, late_genes)
-# length(genes_Early_Late)
-# genes_Early_Late
-# 
-# genes_Intermediate_Late <- intersect(intermediate_genes, late_genes)
-# length(genes_Intermediate_Late)
-# genes_Intermediate_Late
-# 
-# Persistent_DEGs <- union(
-#   genes_Early_Intermediate,
-#   genes_Early_Late
-# )
-# 
-# Persistent_DEGs <- union(
-#   Persistent_DEGs,
-#   genes_Intermediate_Late
-# )
-# 
-# 
-# length(Persistent_DEGs)
-# Persistent_DEGs
-# 
-# Persistent_Immune_DEGs <- c(
-#   "Cxcl15",   # chemokine (neutrophil recruitment)
-#   "Apol6",    # interferon-inducible, apoptosis/innate immunity
-#   "Itih4",    # acute phase protein
-#   "Wfdc18",   # immune / mucosal defense-associated
-#   "Ccr8",     # T cell / Treg chemokine receptor
-#   "Efna3",    # immune cell migration & immune–stromal signaling
-#   "Fgg",      # coagulation–immunity cross-talk
-#   "Vtcn1",    # B7-H4 immune checkpoint
-#   "Agtr2",    # immunomodulatory (macrophage, T cell signaling)
-#   "C6",       # complement
-#   "Cd7",      # T cell / NK marker
-#   "Klrd1",    # NK cell receptor (CD94)
-#   "Ptgdr",    # prostaglandin D2 receptor (Th2, DCs)
-#   "Rorc"      # Th17 / ILC3 master transcription factor
-# )
-
-
-#Select Immune and Inflammtion DEGs from Early and Intermediate Timepoiny
+#Select Immune and Inflammtion IN based DEGs from Early and Intermediate Stages
 DEG_immune_genes_mouse <- c(
   ### Early Stage
   # Neutrophils / innate
@@ -393,36 +284,6 @@ DotPlot(T1D_pln, features = DEG_immune_genes_human, dot.scale = 10) +
 
 
 
-## Islet  Cells----
-options(future.globals.maxSize = 20 * 1024^3)library(future)
-library(future)
-plan(sequential)  # avoids extra memory duplication
-
-T1D_Islet = readRDS("/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/MAI_T1D/islet_final_annotated.rds")
-DimPlot(T1D_Islet,label = TRUE, label.box = T,label.size = 6,repel = T)+
-  NoAxes() 
-T1D_Islet <- SCTransform(T1D_Islet,conserve.memory = T, verbose = T)
-saveRDS(T1D_Islet,"/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/MAI_T1D/islet_final_annotated_v2.rds")
-DefaultAssay(T1D_Islet)<-"RNA"
-DotPlot(T1D_Islet, features = human_genes, dot.scale = 10) +
-  scale_colour_gradient2(
-    low = "navyblue",
-    mid = "#F7F7F7",
-    high = "#D73027",
-    midpoint = 0
-  ) +
-  coord_flip() +
-  scale_x_discrete(labels = function(x) ifelse(x %in% genes_to_label_human, x, "")) +
-  labs(
-    y = "Blood Cell Type",
-    x = "Gene Signature (Human Orthologs)"
-  ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 11),
-    axis.text.y = element_text(size = 10)
-  )
-
-
 #2. Map Top 100 Genes ----
 T1DGene_top100_humanorthologs<- read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 2/Data-Input/SVC Model/Top100Genes_T1D_HumanOrthologs.csv", sep=",", header=T,check.names = FALSE)
 Top100_Mouse<- T1DGene_top100_humanorthologs$mouse_symbol
@@ -481,7 +342,7 @@ DotPlot(NOD_T1D_Timepoints, features = Top100_Mouse_filtered, dot.scale = 10) +
 
 ## Blood Immune Cells----
 
-#T1D_Blood = readRDS("/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/Blood/T1D_Seurat_Object_Final_v2.rds")
+T1D_Blood = readRDS("/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/Blood/T1D_Seurat_Object_Final_v2.rds")
 
 Top100_Mouse<- T1DGene_top100_humanorthologs$mouse_symbol
 genes_label_human <- T1DGene_top100_humanorthologs[T1DGene_top100_humanorthologs$mouse_symbol %in% genes_to_label,]$human_symbol
@@ -517,7 +378,7 @@ DotPlot(T1D_Blood, features = Top100_Human_blood, dot.scale = 10) +
 
 ## Spleen  Cells----
 
-#T1D_Spleen = readRDS("/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/MAI_T1D/spleen_result_annotated_v2.rds")
+T1D_Spleen = readRDS("/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/MAI_T1D/spleen_result_annotated_v2.rds")
 Top100_Human_spleen<- Top100_Human[
   !is.na(Top100_Human) &
     Top100_Human %in% rownames(T1D_Spleen)
@@ -549,7 +410,6 @@ DotPlot(T1D_Spleen, features = Top100_Human_blood, dot.scale = 10) +
   ) 
 
 ## plN  Cells----
-
 
 T1D_pln = readRDS("/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/MAI_T1D/pln_result_annotated_v2.rds")
 
