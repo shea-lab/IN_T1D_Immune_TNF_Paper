@@ -15,7 +15,6 @@ library(dplyr)
 devtools::install_github("mixOmicsTeam/mixOmics")
 library(mixOmics)
 packageVersion("mixOmics")  # Should be 6.24.0 or similar
-# Then unload conflicting packages if loaded
 detach("package:pls", unload = TRUE)
 detach("package:caret", unload = TRUE)
 detach("package:plsRglm", unload = TRUE)
@@ -46,6 +45,7 @@ library(apeglm)
 library(png)
 library(DESeq2)
 library(RColorBrewer)
+library(circlize)
 
 
 # Import Data ----
@@ -102,7 +102,7 @@ combined_counts <- combined_counts[, -1]
 # Preview the combined dataset
 head(combined_counts)
 
-# Batch Corrct Data----
+# Batch Correct Data----
 
 early_data <- combined_counts[, meta_combined$Time == "Early"]
 early_data <- na.omit(early_data)
@@ -173,7 +173,7 @@ ggplot(plot_df_top, aes(x = LV1, y = LV2, color = Group, shape = Group)) +
 
 # PLSDA-Top 100 Genes----
 
-#Subset Significant genes for Early Stag
+#Subset Significant genes for Early Stage
 sig_genes <- rownames(Early_DEResults)[
   Early_DEResults$pvalue <= 0.05 
 ]
@@ -259,12 +259,10 @@ mat_scaled <- t(scale(t(mat)))
 col_fun <- colorRamp2(c(-2, 0, 2), c("navy", "white", "firebrick3"))
 
 
-# 1) choose which genes you want to label
+# Genes to Label
 genes_to_label <- c(
   # Immune / inflammation / T cell regulation
   "Pdcd1", "Cd40lg", "Ccr8", "Cpvl", "Cfi", "Tnfaip8l1",
-  #Metabolic
-  "Cpt2", "Gpd2", "Aacs", "Mpst",
   #Chromatin Regulators
   "Ncor1", "Sp8","Yy2","Zfp703",
   #Trafficking Proteins
@@ -274,6 +272,7 @@ genes_to_label <- c(
   #ERV
   "Zcchc18",
   #Othrs
+  "Cpt2", "Gpd2", "Aacs", "Mpst",
   "Tm9sf4", "Cdkn2c", "Stmn1","Eogt","Lbh","Rbp4",
   "Dusp12", "Prkcz2", "Gsk3a", "Wnk1",  
   "Pemt",  "Cth",  
@@ -322,17 +321,17 @@ group_row <- group[colnames(mat_scaled)]
 
 con <- file(out_file, open = "wt")
 
-# 1) header row: blank cell for gene names + sample names
+#  Header row: blank cell for gene names + sample names
 writeLines(
   paste(c("", colnames(mat_scaled)), collapse = ","),
   con
 )
-# 2) second row: label + group values
+# Second row: label + group values
 writeLines(
   paste(c("Group", as.character(group_row)), collapse = ","),
   con
 )
-# 3) data (genes x samples), with gene names in first column
+# Data (genes x samples), with gene names in first column
 write.table(
   mat_scaled,
   file = con,
@@ -344,83 +343,6 @@ write.table(
 close(con)
 
 
-# Heatmap-Early DEG Genes----
-
-# Expression matrix (genes x samples)
-mat <- as.matrix(early_data_Batchcorrected_DEGFiltered)
-
-# Metadata: group info for samples
-group <- meta_early$Group
-names(group) <- meta_early$Samples
-
-# Annotation colors
-group_col <- c("Progressor" = "#E60000", "Non-Progressor" = "#3D7A60")
-
-# Column annotation
-ha_col <- HeatmapAnnotation(
-  Group = group[colnames(mat)],
-  col = list(Group = group_col),
-  annotation_name_side = "left",
-  show_annotation_name = TRUE,
-  annotation_legend_param = list(title = "Group")
-)
-
-# Row-wise Z-score scaling
-mat_scaled <- t(scale(t(mat)))
-library(ComplexHeatmap)
-library(circlize)
-
-# Color function for heatmap
-col_fun <- colorRamp2(c(-2, 0, 2), c("navy", "white", "firebrick3"))
-
-
-
-
-# Heatmap with gene names
- Heatmap(
-  mat_scaled,
-  name = "Z-score",
-  top_annotation = ha_col,
-  col = col_fun,
-  cluster_rows = TRUE,
-  cluster_columns = TRUE,
-  show_row_names = FALSE,
-  row_names_gp = gpar(fontsize = 8, fontface = "italic"),  # Italicized gene names
-  show_column_names = FALSE,
-  heatmap_legend_param = list(title = "Expression", legend_direction = "vertical")
-)
-
-
-
-write.csv(mat_scaled,"/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 2/Data-Result/T1D_Top100Genes_Heatmap_scaled.csv")
-
-out_file <- "/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 2/Data-Result/T1D_Top100Genes_Heatmap_scaled.csv"
-
-# group vector aligned to mat_scaled columns
-group_row <- group[colnames(mat_scaled)]
-
-con <- file(out_file, open = "wt")
-
-# 1) header row: blank cell for gene names + sample names
-writeLines(
-  paste(c("", colnames(mat_scaled)), collapse = ","),
-  con
-)
-# 2) second row: label + group values
-writeLines(
-  paste(c("Group", as.character(group_row)), collapse = ","),
-  con
-)
-# 3) data (genes x samples), with gene names in first column
-write.table(
-  mat_scaled,
-  file = con,
-  sep = ",",
-  quote = FALSE,
-  col.names = FALSE,
-  row.names = TRUE
-)
-close(con)
 
 # Top 100 Genes-Human ----
 T1DGene_top100_humanorthologs<- read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 2/Data-Input/SVC Model/Top100Genes_T1D_HumanOrthologs.csv", sep=",", header=T,check.names = FALSE)
@@ -442,7 +364,7 @@ T1D_Spleen <- RenameIdents(
 unique(Idents(T1D_Spleen))
 unique(T1D_Spleen$group)
 
-###  Psuedobuk Mean expression (Across CellTypes_-----
+###  Psuedobuk Mean expression Across CellTypes_-----
 
 DefaultAssay(T1D_Spleen) <- "RNA"
 counts_spleen <- GetAssayData(T1D_Spleen, assay = "RNA", layer = "counts")  # genes x cells
@@ -461,7 +383,7 @@ n_cells_per_sample_spleen <- as.numeric(table(sample_id_spleen))  # aligned to l
 pb_sample_mean_spleen <- pb_sample_sum_spleen
 pb_sample_mean_spleen[] <- pb_sample_mean_spleen / n_cells_per_sample_spleen   # row-wise divide
 
-# Convert to genes x samples to match your previous object naming
+# Convert to genes x samples to match   object naming
 bulk_weighted_spleen <- t(pb_sample_mean_spleen)   # genes x samples
 colnames(bulk_weighted_spleen) <- levels(sample_id_spleen)
 
@@ -530,7 +452,7 @@ DimPlot(T1D_pln,label = TRUE, label.box = T,label.size = 9,repel = T)+
 unique(Idents(T1D_pln))
 unique(T1D_pln$group)
 
-###  Psuedobuk Mean expression (Across CellTypes_-----
+###  Psuedobuk Mean expression Across CellTypes_-----
 
 DefaultAssay(T1D_pln) <- "RNA"
 T1D_pln[["RNA"]] <- JoinLayers(T1D_pln[["RNA"]])
@@ -550,7 +472,7 @@ n_cells_per_sample_pln <- as.numeric(table(sample_id_pln))  # aligned to levels(
 pb_sample_mean_pln <- pb_sample_sum_pln
 pb_sample_mean_pln[] <- pb_sample_sum_pln / n_cells_per_sample_pln   # row-wise divide
 
-# Convert to genes x samples to match your previous object naming
+# Convert to genes x samples to match   object naming
 bulk_weighted_pln <- t(pb_sample_mean_pln)   # genes x samples
 colnames(bulk_weighted_pln) <- levels(sample_id_pln)
 
@@ -631,7 +553,7 @@ T1D_Blood <- RenameIdents(
 )
 
 
-###  Psuedobuk Mean expression (Across CellTypes_-----
+###  Psuedobuk Mean expression Across CellTypes_-----
 
 DefaultAssay(T1D_Blood) <- "RNA"
 counts_Blood <- GetAssayData(T1D_Blood, assay = "RNA", layer = "counts")  # genes x cells
@@ -650,7 +572,7 @@ n_cells_per_sample_Blood <- as.numeric(table(sample_id_Blood))  # aligned to lev
 pb_sample_mean_Blood <- pb_sample_sum_Blood
 pb_sample_mean_Blood[] <- pb_sample_sum_Blood / n_cells_per_sample_Blood   # row-wise divide
 
-# Convert to genes x samples to match your previous object naming
+# Convert to genes x samples to match   object naming
 bulk_weighted_Blood <- t(pb_sample_mean_Blood)   # genes x samples
 colnames(bulk_weighted_Blood) <- levels(sample_id_Blood)
 
