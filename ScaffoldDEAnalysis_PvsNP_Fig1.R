@@ -462,7 +462,7 @@ write.csv(combined_gsea_df, "/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPap
 filtered_gsea_df <- combined_gsea_df[
   ((combined_gsea_df$early_NES >= 1 | combined_gsea_df$early_NES <= -1) & combined_gsea_df$early_p.adjust < 0.1) |
     ((combined_gsea_df$intermediate_NES >= 1 | combined_gsea_df$intermediate_NES <= -1) & combined_gsea_df$intermediate_p.adjust < 0.1) |
-    ((combined_gsea_df$late_NES >= 1 | combined_gsea_df$late_NES <= -1) & combined_gsea_df$late_p.adjust < 0.05),
+    ((combined_gsea_df$late_NES >= 1 | combined_gsea_df$late_NES <= -1) & combined_gsea_df$late_p.adjust < 0.1),
 ]
 dim(filtered_gsea_df)
 # View the filtered data
