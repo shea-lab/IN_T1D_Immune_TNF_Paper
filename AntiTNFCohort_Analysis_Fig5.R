@@ -34,6 +34,7 @@ counts_AntiTNF_processed <- flexiDEG.function1(counts_AntiTNF, meta_AntiTNF, # R
 counts_AntiTNF_processed <- counts_AntiTNF_processed[!grepl("^Gm[0-9]", rownames(counts_AntiTNF_processed)), ]
 
 
+# In Code - Responder = Sensitive ; Non-Responder = Resistant for naming schemes
 # Ensure factors and correct reference levels
 meta_AntiTNF$Group   <- relevel(factor(meta_AntiTNF$Group), "Non-Responder")  # reference = Responder
 meta_AntiTNF$Time    <- factor(meta_AntiTNF$Time, levels = c("6", "9"))   # 6 = Pre, 9 = Post
