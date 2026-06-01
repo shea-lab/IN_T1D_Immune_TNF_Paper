@@ -20,6 +20,7 @@ library(glmGamPoi)
 getwd()
 
 
+# 2. Map DEGs ----
 
 #Select Immune and Inflammtion IN based DEGs from Early and Intermediate Stages
 DEG_immune_genes_mouse <- c(
@@ -71,7 +72,7 @@ DEG_immune_genes_human <- c(
 
 ## NOD Pancreas Immune  Cells----
 NOD_T1D_Timepoints<-readRDS("/Users/jyotirmoyroy/Desktop/Immunometabolism T1D Paper/SingleCellRNASeq/ProcessedRDSFile/annotated_T1D_Timepoints_v8.rds")
-
+DimPlot(NOD_T1D_Timepoints)
 tcell_idents <- c(
   "CD8 memory",
   "CD8 exhausted effector-like",
@@ -281,10 +282,647 @@ DotPlot(T1D_pln, features = DEG_immune_genes_human, dot.scale = 10) +
   ) 
 
 
+# 3. DEGs Module Scores----
+
+## NOD Pancreas----
+
+EarlyDEG_NOD<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/DEG_DESEQ_Early_NOD_ProgressorVsNonProgressor.csv",row.names = 1)
+Early_upDEG_NOD <-  EarlyDEG_NOD[EarlyDEG_NOD$log2FoldChange>=1 & EarlyDEG_NOD$pvalue<=0.05, ]
+Early_downDEG_NOD <-  EarlyDEG_NOD[EarlyDEG_NOD$log2FoldChange<=-1 & EarlyDEG_NOD$pvalue<=0.05, ]
+Early_upDEG_NOD_use <- intersect(rownames(Early_upDEG_NOD), rownames(NOD_T1D_Timepoints))
+Early_downDEG_NOD_use <- intersect(rownames(Early_downDEG_NOD), rownames(NOD_T1D_Timepoints))
 
 
+IntermediateDEG_NOD<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/DEG_DESEQ_Intermediate_NOD_ProgressorVsNonProgressor.csv",row.names = 1)
+Intermediate_upDEG_NOD <-  IntermediateDEG_NOD[IntermediateDEG_NOD$log2FoldChange>=1 & IntermediateDEG_NOD$pvalue<=0.05, ]
+Intermediate_downDEG_NOD <-  IntermediateDEG_NOD[IntermediateDEG_NOD$log2FoldChange<=-1 & IntermediateDEG_NOD$pvalue<=0.05, ]
+Intermediate_upDEG_NOD_use <- intersect(rownames(Intermediate_upDEG_NOD), rownames(NOD_T1D_Timepoints))
+Intermediate_downDEG_NOD_use <- intersect(rownames(Intermediate_downDEG_NOD), rownames(NOD_T1D_Timepoints))
 
-#2. Map Top 100 Genes ----
+LateDEG_NOD<-read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 1/Data-Results/DEG_DESEQ_Late_NOD_ProgressorVsNonProgressor.csv",row.names = 1)
+Late_upDEG_NOD <-  LateDEG_NOD[LateDEG_NOD$log2FoldChange>=1 & LateDEG_NOD$pvalue<=0.05, ]
+Late_downDEG_NOD <-  LateDEG_NOD[LateDEG_NOD$log2FoldChange<=-1 & LateDEG_NOD$pvalue<=0.05, ]
+Late_upDEG_NOD_use <- intersect(rownames(Late_upDEG_NOD), rownames(NOD_T1D_Timepoints))
+Late_downDEG_NOD_use <- intersect(rownames(Late_downDEG_NOD), rownames(NOD_T1D_Timepoints))
+
+
+# Add module scores
+
+#Early
+NOD_T1D_Timepoints <- AddModuleScore(
+  object = NOD_T1D_Timepoints,
+  features = list(Early_upDEG_NOD_use),
+  name = "EarlyProgressor_Score",
+  assay = DefaultAssay(NOD_T1D_Timepoints)
+)
+NOD_T1D_Timepoints <- AddModuleScore(
+  object = NOD_T1D_Timepoints,
+  features = list(Early_downDEG_NOD_use),
+  name = "EarlyNonProgressor_Score",
+  assay = DefaultAssay(NOD_T1D_Timepoints)
+)
+
+#Intermediate
+NOD_T1D_Timepoints <- AddModuleScore(
+  object = NOD_T1D_Timepoints,
+  features = list(Intermediate_upDEG_NOD_use),
+  name = "IntermediateProgressor_Score",
+  assay = DefaultAssay(NOD_T1D_Timepoints)
+)
+NOD_T1D_Timepoints <- AddModuleScore(
+  object = NOD_T1D_Timepoints,
+  features = list(Intermediate_downDEG_NOD_use),
+  name = "IntermediateNonProgressor_Score",
+  assay = DefaultAssay(NOD_T1D_Timepoints)
+)
+
+#Late
+NOD_T1D_Timepoints <- AddModuleScore(
+  object = NOD_T1D_Timepoints,
+  features = list(Late_upDEG_NOD_use),
+  name = "LateProgressor_Score",
+  assay = DefaultAssay(NOD_T1D_Timepoints)
+)
+NOD_T1D_Timepoints <- AddModuleScore(
+  object = NOD_T1D_Timepoints,
+  features = list(Late_downDEG_NOD_use),
+  name = "LateNonProgressor_Score",
+  assay = DefaultAssay(NOD_T1D_Timepoints)
+)
+NOD_T1D_Timepoints$celltype<-Idents(NOD_T1D_Timepoints)
+
+
+#Early
+plot_df <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(celltype, EarlyProgressor_Score1, EarlyNonProgressor_Score1) %>%
+  filter(!is.na(celltype)) %>%
+  pivot_longer(
+    cols = c(EarlyProgressor_Score1, EarlyNonProgressor_Score1),
+    names_to = "signature",
+    values_to = "score"
+  )
+stat_df <- plot_df %>%
+  group_by(celltype) %>%
+  summarise(
+    p_value = tryCatch(
+      wilcox.test(score ~ signature)$p.value,
+      error = function(e) NA_real_
+    ),
+    y_pos = max(score, na.rm = TRUE) + 0.08 * diff(range(plot_df$score, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    p_adj = p.adjust(p_value, method = "BH"),
+    label = paste0(signif(p_adj, 3))
+  )
+
+
+ggplot(plot_df, aes(x = celltype, y = score, fill = signature)) +
+  geom_violin(
+    scale = "width",
+    trim = TRUE,
+    alpha = 0.7,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_text(
+    data = stat_df,
+    aes(x = celltype, y = y_pos, label = label),
+    inherit.aes = FALSE,
+    size = 4.5
+  ) +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Module Score",
+    title = "Early Stage DEGs-NOD Pancreas"
+  ) +
+  theme(
+    axis.title.x = element_text(size = 18),   # x-axis label
+    axis.title.y = element_text(size = 18),   # y-axis label
+    axis.text.x  = element_text(size = 18, angle = 45, hjust = 1),
+    axis.text.y  = element_text(size = 18),
+    legend.title = element_blank()
+  )+scale_fill_manual(
+    values = c(
+      "EarlyProgressor_Score1" = "#E60000",
+      "EarlyNonProgressor_Score1" = "#3D7A60"
+    ),
+    labels = c(
+      "EarlyProgressor_Score1" = "Progressor Score",
+      "EarlyNonProgressor_Score1" = "Non-Progressor Score"
+    )
+  )
+
+median_diff_df <- plot_df %>%
+  group_by(celltype, signature) %>%
+  summarise(
+    median_score = median(score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = signature,
+    values_from = median_score
+  ) %>%
+  mutate(
+    median_difference = EarlyProgressor_Score1 - EarlyNonProgressor_Score1
+  ) %>%
+  arrange(desc(abs(median_difference)))
+
+
+effect_df <- plot_df %>%
+  group_by(celltype) %>%
+  summarise(
+    median_prog = median(score[signature=="EarlyProgressor_Score1"]),
+    median_np = median(score[signature=="EarlyNonProgressor_Score1"]),
+    median_diff = median_prog - median_np,
+    mad_all = mad(score),
+    standardized_effect = median_diff/mad_all
+  )
+
+
+#Intermediate
+plot_df <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(celltype, IntermediateProgressor_Score1, IntermediateNonProgressor_Score1) %>%
+  filter(!is.na(celltype)) %>%
+  pivot_longer(
+    cols = c(IntermediateProgressor_Score1, IntermediateNonProgressor_Score1),
+    names_to = "signature",
+    values_to = "score"
+  )
+stat_df <- plot_df %>%
+  group_by(celltype) %>%
+  summarise(
+    p_value = tryCatch(
+      wilcox.test(score ~ signature)$p.value,
+      error = function(e) NA_real_
+    ),
+    y_pos = max(score, na.rm = TRUE) + 0.08 * diff(range(plot_df$score, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    p_adj = p.adjust(p_value, method = "BH"),
+    label = paste0(signif(p_adj, 3))
+  )
+
+
+ggplot(plot_df, aes(x = celltype, y = score, fill = signature)) +
+  geom_violin(
+    scale = "width",
+    trim = TRUE,
+    alpha = 0.7,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_text(
+    data = stat_df,
+    aes(x = celltype, y = y_pos, label = label),
+    inherit.aes = FALSE,
+    size = 4.5
+  ) +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Module Score",
+    title = "Intermediate Stage DEGs-NOD Pancreas"
+  ) +
+  theme(
+    axis.title.x = element_text(size = 18),   # x-axis label
+    axis.title.y = element_text(size = 18),   # y-axis label
+    axis.text.x  = element_text(size = 18, angle = 45, hjust = 1),
+    axis.text.y  = element_text(size = 18),
+    legend.title = element_blank()
+  )+scale_fill_manual(
+    values = c(
+      "IntermediateProgressor_Score1" = "#E60000",
+      "IntermediateNonProgressor_Score1" = "#3D7A60"
+    ),
+    labels = c(
+      "IntermediateProgressor_Score1" = "Progressor Score",
+      "IntermediateNonProgressor_Score1" = "Non-Progressor Score"
+    )
+  )
+
+median_diff_df <- plot_df %>%
+  group_by(celltype, signature) %>%
+  summarise(
+    median_score = median(score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = signature,
+    values_from = median_score
+  ) %>%
+  mutate(
+    median_difference = IntermediateProgressor_Score1 - IntermediateNonProgressor_Score1
+  ) %>%
+  arrange(desc(abs(median_difference)))
+
+
+effect_df <- plot_df %>%
+  group_by(celltype) %>%
+  summarise(
+    median_prog = median(score[signature=="IntermediateProgressor_Score1"]),
+    median_np = median(score[signature=="IntermediateNonProgressor_Score1"]),
+    median_diff = median_prog - median_np,
+    mad_all = mad(score),
+    standardized_effect = median_diff/mad_all
+  )
+
+
+#Late
+plot_df <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(celltype, LateProgressor_Score1, LateNonProgressor_Score1) %>%
+  filter(!is.na(celltype)) %>%
+  pivot_longer(
+    cols = c(LateProgressor_Score1, LateNonProgressor_Score1),
+    names_to = "signature",
+    values_to = "score"
+  )
+stat_df <- plot_df %>%
+  group_by(celltype) %>%
+  summarise(
+    p_value = tryCatch(
+      wilcox.test(score ~ signature)$p.value,
+      error = function(e) NA_real_
+    ),
+    y_pos = max(score, na.rm = TRUE) + 0.08 * diff(range(plot_df$score, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    p_adj = p.adjust(p_value, method = "BH"),
+    label = paste0(signif(p_adj, 3))
+  )
+
+
+ggplot(plot_df, aes(x = celltype, y = score, fill = signature)) +
+  geom_violin(
+    scale = "width",
+    trim = TRUE,
+    alpha = 0.7,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_text(
+    data = stat_df,
+    aes(x = celltype, y = y_pos, label = label),
+    inherit.aes = FALSE,
+    size = 4.5
+  ) +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Module Score",
+    title = "Late Stage DEGs-NOD Pancreas"
+  ) +
+  theme(
+    axis.title.x = element_text(size = 18),   # x-axis label
+    axis.title.y = element_text(size = 18),   # y-axis label
+    axis.text.x  = element_text(size = 18, angle = 45, hjust = 1),
+    axis.text.y  = element_text(size = 18),
+    legend.title = element_blank()
+  )+scale_fill_manual(
+    values = c(
+      "LateProgressor_Score1" = "#E60000",
+      "LateNonProgressor_Score1" = "#3D7A60"
+    ),
+    labels = c(
+      "LateProgressor_Score1" = "Progressor Score",
+      "LateNonProgressor_Score1" = "Non-Progressor Score"
+    )
+  )
+
+median_diff_df <- plot_df %>%
+  group_by(celltype, signature) %>%
+  summarise(
+    median_score = median(score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = signature,
+    values_from = median_score
+  ) %>%
+  mutate(
+    median_difference = LateProgressor_Score1 - LateNonProgressor_Score1
+  ) %>%
+  arrange(desc(abs(median_difference)))
+
+
+effect_df <- plot_df %>%
+  group_by(celltype) %>%
+  summarise(
+    median_prog = median(score[signature=="LateProgressor_Score1"]),
+    median_np = median(score[signature=="LateNonProgressor_Score1"]),
+    median_diff = median_prog - median_np,
+    mad_all = mad(score),
+    standardized_effect = median_diff/mad_all
+  )
+
+
+## Combined
+diff_violin_df <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(
+    celltype,
+    EarlyProgressor_Score1,
+    EarlyNonProgressor_Score1,
+    IntermediateProgressor_Score1,
+    IntermediateNonProgressor_Score1,
+    LateProgressor_Score1,
+    LateNonProgressor_Score1
+  ) %>%
+  filter(!is.na(celltype)) %>%
+  mutate(
+    Early = EarlyProgressor_Score1 - EarlyNonProgressor_Score1,
+    Intermediate = IntermediateProgressor_Score1 - IntermediateNonProgressor_Score1,
+    Late = LateProgressor_Score1 - LateNonProgressor_Score1
+  ) %>%
+  dplyr::select(celltype, Early, Intermediate, Late) %>%
+  pivot_longer(
+    cols = c(Early, Intermediate, Late),
+    names_to = "stage",
+    values_to = "score_difference"
+  ) %>%
+  mutate(
+    stage = factor(stage, levels = c("Early", "Intermediate", "Late"))
+  )
+
+ggplot(diff_violin_df,
+       aes(x = celltype,
+           y = score_difference,
+           fill = stage)) +
+  geom_violin(
+    scale = "width",
+    trim = TRUE,
+    alpha = 0.75,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_boxplot(
+    width = 0.12,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    linewidth = 0.7
+  ) +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Progressor - Non-Progressor Score Difference",
+    title = "P vs NP DEG Score Difference Across NOD Pancreas Cell Types",
+    fill = NULL
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Early" = "#F4A6A6",
+      "Intermediate" = "#E60000",
+      "Late" = "#8B0000"
+    )
+  ) +
+  theme(
+    axis.title.y = element_text(size = 18),
+    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),
+    axis.text.y  = element_text(size = 16),
+    legend.text  = element_text(size = 14)
+  )
+
+# Difference in module score
+
+#Early
+NOD_T1D_Timepoints$EarlyPvsNP <-
+  NOD_T1D_Timepoints$EarlyProgressor_Score1 -
+  NOD_T1D_Timepoints$EarlyNonProgressor_Score1
+
+bar_df <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(celltype, EarlyPvsNP) %>%
+  filter(!is.na(celltype)) %>%
+  group_by(celltype) %>%
+  summarise(
+    median_enrichment = median(EarlyPvsNP, na.rm = TRUE),
+    mad_enrichment = mad(EarlyPvsNP, na.rm = TRUE),
+    n_cells = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(median_enrichment)) %>%
+  mutate(
+    celltype = factor(celltype, levels = celltype),
+    direction = ifelse(median_enrichment >= 0,
+                       "Progressor Score",
+                       "Non-Progressor Score")
+  )
+  
+ggplot(bar_df,
+       aes(x = celltype,
+           y = median_enrichment,
+           fill = direction)) +
+  geom_col(width = 0.75) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed",
+             linewidth = 0.7) +
+  coord_flip() +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Median Progressor vs Non-Progressor Score Difference",
+    title = "Early Stage DEGs-NOD Pancreas"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Progressor Score" = "#E60000",
+      "Non-Progressor Score" = "#3D7A60"
+    )
+  ) +
+  theme(
+    axis.title.x = element_text(size = 18),
+    axis.text.x  = element_text(size = 16),
+    axis.text.y  = element_text(size = 18),
+    legend.position = "none"
+  )
+
+
+#Intermediate
+NOD_T1D_Timepoints$IntermediatePvsNP <-
+  NOD_T1D_Timepoints$IntermediateProgressor_Score1 -
+  NOD_T1D_Timepoints$IntermediateNonProgressor_Score1
+
+bar_df <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(celltype, IntermediatePvsNP) %>%
+  filter(!is.na(celltype)) %>%
+  group_by(celltype) %>%
+  summarise(
+    median_enrichment = median(IntermediatePvsNP, na.rm = TRUE),
+    mad_enrichment = mad(IntermediatePvsNP, na.rm = TRUE),
+    n_cells = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(median_enrichment)) %>%
+  mutate(
+    celltype = factor(celltype, levels = celltype),
+    direction = ifelse(median_enrichment >= 0,
+                       "Progressor Score",
+                       "Non-Progressor Score")
+  )
+
+ggplot(bar_df,
+       aes(x = celltype,
+           y = median_enrichment,
+           fill = direction)) +
+  geom_col(width = 0.75) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed",
+             linewidth = 0.7) +
+  coord_flip() +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Median Progressor vs Non-Progressor Score Difference",
+    title = "Intermediate Stage DEGs-NOD Pancreas"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Progressor Score" = "#E60000",
+      "Non-Progressor Score" = "#3D7A60"
+    )
+  ) +
+  theme(
+    axis.title.x = element_text(size = 18),
+    axis.text.x  = element_text(size = 16),
+    axis.text.y  = element_text(size = 18),
+    legend.position = "none"
+  )
+
+#Late
+NOD_T1D_Timepoints$LatePvsNP <-
+  NOD_T1D_Timepoints$LateProgressor_Score1 -
+  NOD_T1D_Timepoints$LateNonProgressor_Score1
+
+bar_df <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(celltype, LatePvsNP) %>%
+  filter(!is.na(celltype)) %>%
+  group_by(celltype) %>%
+  summarise(
+    median_enrichment = median(LatePvsNP, na.rm = TRUE),
+    mad_enrichment = mad(LatePvsNP, na.rm = TRUE),
+    n_cells = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(median_enrichment)) %>%
+  mutate(
+    celltype = factor(celltype, levels = celltype),
+    direction = ifelse(median_enrichment >= 0,
+                       "Progressor Score",
+                       "Non-Progressor Score")
+  )
+
+ggplot(bar_df,
+       aes(x = celltype,
+           y = median_enrichment,
+           fill = direction)) +
+  geom_col(width = 0.75) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed",
+             linewidth = 0.7) +
+  coord_flip() +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Median Progressor vs Non-Progressor Score Difference",
+    title = "Late Stage DEGs-NOD Pancreas"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Progressor Score" = "#E60000",
+      "Non-Progressor Score" = "#3D7A60"
+    )
+  ) +
+  theme(
+    axis.title.x = element_text(size = 18),
+    axis.text.x  = element_text(size = 16),
+    axis.text.y  = element_text(size = 18),
+    legend.position = "none"
+  )
+
+#Combined
+
+# Summarize median score difference by cell type and stage
+bar_df_all <- NOD_T1D_Timepoints@meta.data %>%
+  dplyr::select(celltype, EarlyPvsNP, IntermediatePvsNP, LatePvsNP) %>%
+  filter(!is.na(celltype)) %>%
+  pivot_longer(
+    cols = c(EarlyPvsNP, IntermediatePvsNP, LatePvsNP),
+    names_to = "stage",
+    values_to = "score_difference"
+  ) %>%
+  mutate(
+    stage = recode(
+      stage,
+      "EarlyPvsNP" = "Early",
+      "IntermediatePvsNP" = "Intermediate",
+      "LatePvsNP" = "Late"
+    ),
+    stage = factor(stage, levels = c("Early", "Intermediate", "Late"))
+  ) %>%
+  group_by(stage, celltype) %>%
+  summarise(
+    median_score_difference = median(score_difference, na.rm = TRUE),
+    mad_score_difference = mad(score_difference, na.rm = TRUE),
+    n_cells = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    direction = ifelse(
+      median_score_difference >= 0,
+      "Progressor Score",
+      "Non-Progressor Score"
+    )
+  )
+
+ggplot(bar_df_all,
+       aes(x = celltype,
+           y = median_score_difference,
+           fill = direction)) +
+  geom_col(width = 0.75) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    linewidth = 0.7
+  ) +
+  coord_flip() +
+  facet_wrap(~ stage, nrow = 1) +
+  theme_classic(base_size = 16) +
+  labs(
+    x = NULL,
+    y = "Median Progressor vs Non-Progressor Score Difference",
+    title = "Progressor vs Non-Progressor DEG Scores Across NOD Pancreas Cell Types"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Progressor Score" = "#E60000",
+      "Non-Progressor Score" = "#3D7A60"
+    )
+  ) +
+  theme(
+    axis.title.x = element_text(size = 18),
+    axis.text.x  = element_text(size = 16),
+    axis.text.y  = element_text(size = 18),
+    strip.text = element_text(size = 18),
+    legend.position = "none"
+  )
+
+#4. Map Top 100 Genes ----
 T1DGene_top100_humanorthologs<- read.csv("/Users/jyotirmoyroy/Desktop/T1S_ImmunometabolismPaper/Figure 2/Data-Input/SVC Model/Top100Genes_T1D_HumanOrthologs.csv", sep=",", header=T,check.names = FALSE)
 Top100_Mouse<- T1DGene_top100_humanorthologs$mouse_symbol
 Top100_Human<- T1DGene_top100_humanorthologs$human_symbol
